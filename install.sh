@@ -11,7 +11,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-GITHUB_RAW="https://raw.githubusercontent.com/YOUR_USER/auto-granola-meeting-recorder/main"
+GITHUB_RAW="https://raw.githubusercontent.com/salcommits/granola_auto_record/main"
 LABEL="com.granola.notifier"
 SCRIPT_DEST="$HOME/.local/bin/granola_mac_notifier.py"
 PLIST_DEST="$HOME/Library/LaunchAgents/${LABEL}.plist"
