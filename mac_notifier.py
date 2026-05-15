@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-mac_notifier.py — runs on YOUR MAC as a launchd background agent
-──────────────────────────────────────────────────────────────────
-Watches the shared queue written by the Hyperagent auto-granola-meeting-recorder.
-When a meeting entry appears, opens Granola via its URL scheme and starts
-a new recording. Shows a brief banner to confirm.
+mac_notifier.py — auto-granola-meeting-recorder
+─────────────────────────────────────────────────
+Runs on your Mac as a launchd background agent.
+Watches ~/.granola_queue.json written by the Hyperagent auto-granola-meeting-recorder.
+When a meeting entry appears, opens Granola via its URL scheme to start a new recording.
 
-install.sh sets this up to run automatically at login.
+Installed automatically by install.sh — do not run manually.
 """
 
 import json
@@ -20,7 +20,7 @@ import os
 QUEUE_FILE    = os.path.expanduser(
     os.environ.get("GRANOLA_QUEUE_FILE", "~/.granola_queue.json")
 )
-POLL_INTERVAL = 10
+POLL_INTERVAL = 10   # seconds between queue checks
 LOG_FILE      = os.path.expanduser("~/Library/Logs/granola_notifier.log")
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -28,7 +28,10 @@ os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)s  %(message)s",
-    handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler(sys.stdout)],
+    handlers=[
+        logging.FileHandler(LOG_FILE),
+        logging.StreamHandler(sys.stdout),
+    ],
 )
 log = logging.getLogger(__name__)
 
@@ -52,27 +55,23 @@ def save_queue(queue: dict) -> None:
 
 
 def banner(title: str, body: str) -> None:
-    """Non-blocking macOS notification banner."""
     script = f'display notification "{body}" with title "{title}"'
     subprocess.Popen(["osascript", "-e", script])
 
 
-def start_granola_recording(title: str) -> None:
-    """
-    Open Granola and start a new recording via its URL scheme.
-    granola://new-document launches a new note and begins recording.
-    """
+def start_recording(title: str) -> None:
+    """Open Granola and start a new recording via the URL scheme."""
     try:
         subprocess.Popen(["open", "granola://new-document"])
         banner("🎙 Granola", f"Recording started — {title}")
-        log.info("started recording: '%s'", title)
+        log.info("recording started: '%s'", title)
     except Exception as exc:
-        banner("🎙 Granola", f"Failed to start recording — {title}")
-        log.error("failed to start recording for '%s': %s", title, exc)
+        banner("🎙 Granola", f"Failed to start — open Granola manually")
+        log.error("failed for '%s': %s", title, exc)
 
 
 def main() -> None:
-    log.info("mac_notifier started — watching %s", QUEUE_FILE)
+    log.info("mac_notifier started — queue: %s", QUEUE_FILE)
 
     while True:
         try:
@@ -81,7 +80,7 @@ def main() -> None:
 
             for eid, entry in queue.items():
                 if not entry.get("done", False):
-                    start_granola_recording(entry.get("title", "Meeting"))
+                    start_recording(entry.get("title", "Meeting"))
                     queue[eid]["done"] = True
                     changed = True
 
